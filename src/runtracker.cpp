@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     }
 
     // Create KCFTracker object
-    Ptr<KCFTracker> tracker = new KCFTracker(); //HOG, FIXEDWINDOW, MULTISCALE, LAB);
+    Ptr<KCFTracker> tracker = new KCFTracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
 
 
 
