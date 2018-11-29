@@ -7,13 +7,89 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include "kcftracker.hpp"
+#include <opencv2/opencv.hpp>
+#include "roiSelector.hpp"
 
 #include <dirent.h>
 
 using namespace std;
 using namespace cv;
 
-int main(int argc, char* argv[]){
+
+
+
+
+int main(int argc, char *argv[])
+{
+
+    if (argc > 5) return -1;
+
+    bool HOG = true;
+    bool FIXEDWINDOW = false;
+    bool MULTISCALE = true;
+    bool SILENT = true;
+    bool LAB = false;
+
+    string fn;
+    int i;
+    for(i = 0; i < argc; i++){
+        if ( strcmp (argv[i], "--hog") == 0 )
+            HOG = true;
+        else if ( strcmp (argv[i], "--fixed_window") == 0 )
+            FIXEDWINDOW = true;
+        else if ( strcmp (argv[i], "--singlescale") == 0 )
+            MULTISCALE = false;
+        else if ( strcmp (argv[i], "--show") == 0 )
+            SILENT = false;
+        else if ( strcmp (argv[i], "--lab") == 0 ){
+            LAB = true;
+            HOG = true;
+        }
+        else if ( strcmp (argv[i], "--gray") == 0 )
+            HOG = false;
+        else
+            fn = argv[i];
+    }
+
+    // Create KCFTracker object
+    Ptr<KCFTracker> tracker = new KCFTracker(); //HOG, FIXEDWINDOW, MULTISCALE, LAB);
+
+
+
+    cv::VideoCapture vc(fn);
+
+    bool has_init = false;
+
+
+    while (1) {
+        cv::Mat frame;
+        vc >> frame;
+        if (frame.empty()) break;
+
+        cv::resize(frame, frame, cv::Size(320, 240));
+        cv::Rect2d box;
+        if (has_init) {
+            box = tracker->update(frame);
+            cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
+        }
+        cv::imshow("Frame", frame);
+        char key = cv::waitKey(1);
+
+        if ('s' == key) {
+            cv::Rect2d box = cv::selectROI("Frame", frame, true, false);
+            std::cout << "select roi " << box << std::endl;
+            tracker->init(box, frame);
+            has_init = true;
+        } else if ('q' == key) {
+            break;
+        }
+    }
+    return 0;
+}
+
+
+
+int main_old(int argc, char* argv[]){
 
 	if (argc > 5) return -1;
 
