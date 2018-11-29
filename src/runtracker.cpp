@@ -21,18 +21,16 @@ using namespace cv;
 
 int main(int argc, char *argv[])
 {
-
-    if (argc > 5) return -1;
-
     bool HOG = true;
     bool FIXEDWINDOW = false;
     bool MULTISCALE = true;
     bool SILENT = true;
     bool LAB = false;
+    bool HELP = false;
 
     string fn;
-    int i;
-    for(i = 0; i < argc; i++){
+
+    for(int i = 1; i < argc; i++){
         if ( strcmp (argv[i], "--hog") == 0 )
             HOG = true;
         else if ( strcmp (argv[i], "--fixed_window") == 0 )
@@ -47,9 +45,23 @@ int main(int argc, char *argv[])
         }
         else if ( strcmp (argv[i], "--gray") == 0 )
             HOG = false;
+        else if ( strcmp (argv[i], "--help") == 0 )
+            HELP = true;
         else
             fn = argv[i];
     }
+
+    if (HELP || fn.size() == 0) {
+        printf("usage:\n"
+               "    %s [--hog] [--fixed_window] [--show] [--lab] [--gray] [--help] video_filename\n"
+               "    press 's' to select a ROI\n"
+               "    press 'q' to quit\n"
+               , argv[0]);
+        return 0;
+    }
+
+
+
 
     // Create KCFTracker object
     Ptr<KCFTracker> tracker = new KCFTracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
