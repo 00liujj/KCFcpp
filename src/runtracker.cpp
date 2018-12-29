@@ -73,15 +73,29 @@ int main(int argc, char *argv[])
     bool has_init = false;
 
 
+    float old_w = 0, new_w = 0;
+
+    cv::Size2f size(320, 240);
+
     while (1) {
         cv::Mat frame;
         vc >> frame;
         if (frame.empty()) break;
 
-        cv::resize(frame, frame, cv::Size(320, 240));
-        cv::Rect2d box;
+        cv::resize(frame, frame, size);
+        cv::Rect box;
         if (has_init) {
             box = tracker->update(frame);
+            new_w = box.width / size.width;
+
+            float rate = (new_w - old_w) / new_w;
+            old_w = new_w;
+            printf("The width change rate is %d %f\n", box.width, rate);
+            printf("TRACKING_RESULTS: %f %f %f %f\n", box.x/size.width, box.y/size.height,
+                   (box.x+box.width)/size.width, (box.y+box.height)/size.height);
+            //printf("TRACKING_RESULTS2: %d %d %d %d\n", box.x, box.y, box.width, box.height);
+
+
             cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
         }
         cv::imshow("Frame", frame);
@@ -90,8 +104,10 @@ int main(int argc, char *argv[])
         if ('s' == key) {
             cv::Rect2d box = cv::selectROI("Frame", frame, true, false);
             std::cout << "select roi " << box << std::endl;
-            tracker->init(box, frame);
-            has_init = true;
+            if (box.width > 0  && box.height > 0) {
+                tracker->init(box, frame);
+                has_init = true;
+            }
         } else if ('q' == key) {
             break;
         }
