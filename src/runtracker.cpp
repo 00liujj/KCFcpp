@@ -37,13 +37,128 @@ void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn) {
             txtfn = fn+".txt";
         }
         ofstream ofs(txtfn);
-        cv::Rect box2 = box;
-        ofs << cv::format("%d %d %d %d %d\n", 0, box2.x, box2.y, box2.width, box2.height);
+        //cv::Rect box2 = box;
+        //ofs << cv::format("%d %d %d %d %d\n", 0, box2.x, box2.y, box2.width, box2.height);
+        // darknet style
+        ofs << cv::format("%d %f %f %f %f\n", 0, box.x+box.width/2.f, box.y+box.height/2.f, box.width, box.height);
     }
 }
 
 
-int main(int argc, char *argv[])
+int annoate(int argc, char *argv[]) {
+
+    bool HOG = true;
+    bool FIXEDWINDOW = false;
+    bool MULTISCALE = true;
+    bool SILENT = true;
+    bool LAB = false;
+    bool HELP = false;
+    string start_roi;
+
+    vector<string> fns;
+
+    for(int i = 1; i < argc; i++){
+        if ( strcmp (argv[i], "--hog") == 0 )
+            HOG = true;
+        else if ( strcmp (argv[i], "--fixed_window") == 0 )
+            FIXEDWINDOW = true;
+        else if ( strcmp (argv[i], "--singlescale") == 0 )
+            MULTISCALE = false;
+        else if ( strcmp (argv[i], "--show") == 0 )
+            SILENT = false;
+        else if ( strcmp (argv[i], "--lab") == 0 ){
+            LAB = true;
+            HOG = true;
+        }
+        else if ( strcmp (argv[i], "--start_roi") == 0 ) {
+            i = i+1;
+            start_roi = argv[i];
+        }
+        else if ( strcmp (argv[i], "--gray") == 0 )
+            HOG = false;
+        else if ( strcmp (argv[i], "--help") == 0 )
+            HELP = true;
+        else
+            fns.push_back(argv[i]);
+    }
+
+    if (HELP || fns.size() == 0) {
+        printf("usage:\n"
+               "    %s [--hog] [--fixed_window] [--show] [--lab] [--gray] [--help] video_filename\n"
+               "    press 's' to select a ROI\n"
+               "    press 'q' to quit\n"
+               , argv[0]);
+        return 0;
+    }
+
+
+
+
+    // Create KCFTracker object
+    Ptr<KCFTracker> tracker = new KCFTracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
+
+
+    cv::Size2f size(640, 480);
+
+    int count = 0;
+
+
+    cv::Rect box;
+    cv::Rect prev_box;
+
+    for (int i=0; i<fns.size(); i++) {
+      string fn = fns[i];
+      cout << "read " << fn << endl;
+      cv::VideoCapture vc(fn);
+      while (1) {
+        cv::Mat mat, frame;
+        vc >> mat;
+        if (mat.empty()) break;
+
+        cv::resize(mat, frame, size);
+
+        cv::Mat showImg = frame.clone();
+
+
+
+
+        if (prev_box.width > 0 && prev_box.height > 0) {
+            tracker->init(prev_box, frame);
+            box = tracker->update(frame);
+        }
+
+        cv::rectangle(showImg, box, CV_RGB(0, 255, 0), 1);
+
+
+        cv::Rect input_box = cv::selectROI("Frame", frame, true, false);
+        if (input_box.width > 0 && input_box.height > 0) {
+            box = input_box;
+        }
+
+        output_box(count, box, size, fn);
+
+        prev_box = box;
+
+        //cv::waitKey(0);
+
+        count++;
+
+      }
+    }
+    return 0;
+
+
+
+
+
+}
+
+
+
+
+
+
+int track_video(int argc, char *argv[])
 {
     bool HOG = true;
     bool FIXEDWINDOW = false;
@@ -176,6 +291,12 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+int main(int argc, char *argv[])
+{
+    //annoate(argc, argv);
+    track_video(argc, argv);
+    return 0;
+}
 
 
 int main_old(int argc, char* argv[]){
