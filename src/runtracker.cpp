@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
 
     for (int i=0; i<fns.size(); i++) {
       string fn = fns[i];
+      cout << "read " << fn << endl;
       cv::VideoCapture vc(fn);
       while (1) {
         cv::Mat mat, frame;
@@ -143,7 +144,7 @@ int main(int argc, char *argv[])
         }
 
         if (has_init) {
-            cv::Rect box = tracker->update(frame);
+            cv::Rect2f box = tracker->update(frame);
             output_box(count, box, size, fn);
             cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
         }
