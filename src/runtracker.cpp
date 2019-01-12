@@ -16,7 +16,31 @@ using namespace std;
 using namespace cv;
 
 
+void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn) {
 
+    static float old_w = 0;
+    float new_w = box.width / size.width;
+
+    float rate = (new_w - old_w) / new_w;
+    old_w = new_w;
+    printf("The width change rate is %f %f\n", box.width, rate);
+    printf("TRACKING_RESULTS: %05d %f %f %f %f\n", count, box.x/size.width, box.y/size.height,
+           (box.x+box.width)/size.width, (box.y+box.height)/size.height);
+
+    char* outbox = getenv("OUTPUT_BOX");
+    if (outbox && strcmp(outbox, "1") == 0) {
+        string::size_type pos = fn.find_last_of(".");
+        string txtfn;
+        if (pos != string::npos) {
+            txtfn = string(fn, 0, pos) + ".txt";
+        } else {
+            txtfn = fn+".txt";
+        }
+        ofstream ofs(txtfn);
+        cv::Rect box2 = box;
+        ofs << cv::format("%d %d %d %d %d\n", 0, box2.x, box2.y, box2.width, box2.height);
+    }
+}
 
 
 int main(int argc, char *argv[])
@@ -27,8 +51,9 @@ int main(int argc, char *argv[])
     bool SILENT = true;
     bool LAB = false;
     bool HELP = false;
+    string start_roi;
 
-    string fn;
+    vector<string> fns;
 
     for(int i = 1; i < argc; i++){
         if ( strcmp (argv[i], "--hog") == 0 )
@@ -43,15 +68,19 @@ int main(int argc, char *argv[])
             LAB = true;
             HOG = true;
         }
+        else if ( strcmp (argv[i], "--start_roi") == 0 ) {
+            i = i+1;
+            start_roi = argv[i];
+        }
         else if ( strcmp (argv[i], "--gray") == 0 )
             HOG = false;
         else if ( strcmp (argv[i], "--help") == 0 )
             HELP = true;
         else
-            fn = argv[i];
+            fns.push_back(argv[i]);
     }
 
-    if (HELP || fn.size() == 0) {
+    if (HELP || fns.size() == 0) {
         printf("usage:\n"
                "    %s [--hog] [--fixed_window] [--show] [--lab] [--gray] [--help] video_filename\n"
                "    press 's' to select a ROI\n"
@@ -68,49 +97,80 @@ int main(int argc, char *argv[])
 
 
 
-    cv::VideoCapture vc(fn);
 
     bool has_init = false;
 
 
-    float old_w = 0, new_w = 0;
+    cv::Size2f size(640, 480);
 
-    cv::Size2f size(320, 240);
+    int count = 0;
 
-    while (1) {
-        cv::Mat frame;
-        vc >> frame;
-        if (frame.empty()) break;
+    for (int i=0; i<fns.size(); i++) {
+      string fn = fns[i];
+      cv::VideoCapture vc(fn);
+      while (1) {
+        cv::Mat mat, frame;
+        vc >> mat;
+        if (mat.empty()) break;
 
-        cv::resize(frame, frame, size);
-        cv::Rect box;
+        cv::resize(mat, frame, size);
+
+        if (start_roi.size() > 0) {
+            istringstream iss(start_roi);
+            int start_idx;
+
+            iss >> start_idx;
+
+            if (start_idx == count) {
+                float x1, y1, x2, y2;
+                iss >> x1 >> y1 >> x2 >> y2;
+
+                cv::Rect box;
+
+                box.x = x1 * size.width+0.5f;
+                box.y = y1 * size.height+0.5f;
+                box.width = (x2-x1) * size.width+0.5f;
+                box.height = (y2-y1) * size.height+0.5f;
+
+                if (box.width ==0 || box.height == 0) {
+                    box = cv::selectROI("Frame", frame, true, false);
+                }
+
+                tracker->init(box, frame);
+                has_init = true;
+                output_box(count, box, size, fn);
+            }
+        }
+
         if (has_init) {
-            box = tracker->update(frame);
-            new_w = box.width / size.width;
-
-            float rate = (new_w - old_w) / new_w;
-            old_w = new_w;
-            printf("The width change rate is %d %f\n", box.width, rate);
-            printf("TRACKING_RESULTS: %f %f %f %f\n", box.x/size.width, box.y/size.height,
-                   (box.x+box.width)/size.width, (box.y+box.height)/size.height);
-            //printf("TRACKING_RESULTS2: %d %d %d %d\n", box.x, box.y, box.width, box.height);
-
-
+            cv::Rect box = tracker->update(frame);
+            output_box(count, box, size, fn);
             cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
         }
+
         cv::imshow("Frame", frame);
         char key = cv::waitKey(1);
 
         if ('s' == key) {
-            cv::Rect2d box = cv::selectROI("Frame", frame, true, false);
+            cv::Rect box = cv::selectROI("Frame", frame, true, false);
             std::cout << "select roi " << box << std::endl;
             if (box.width > 0  && box.height > 0) {
                 tracker->init(box, frame);
                 has_init = true;
+                output_box(count, box, size, fn);
             }
         } else if ('q' == key) {
             break;
         }
+
+
+
+        //if (count > 1000)
+        //cv::imwrite(cv::format("NCAP/%05d.jpg", count), mat);
+
+        count++;
+
+      }
     }
     return 0;
 }

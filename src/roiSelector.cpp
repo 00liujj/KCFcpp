@@ -38,7 +38,7 @@ class ROISelector
         while (!(key == 32 || key == 27 || key == 13))
         {
             // draw the selected object
-            rectangle(selectorParams.image, selectorParams.box, Scalar(255, 0, 0), 2, 1);
+            rectangle(selectorParams.image, selectorParams.box, Scalar(255, 0, 0), 1, 1);
 
             // draw cross air in the middle of bounding box
             if (showCrossair)
@@ -49,7 +49,7 @@ class ROISelector
                            (int)(selectorParams.box.y + selectorParams.box.height / 2)),
                      Point((int)(selectorParams.box.x + selectorParams.box.width),
                            (int)(selectorParams.box.y + selectorParams.box.height / 2)),
-                     Scalar(255, 0, 0), 2, 1);
+                     Scalar(255, 0, 0), 1, 1);
 
                 // vertical line
                 line(selectorParams.image,
@@ -57,7 +57,7 @@ class ROISelector
                            (int)selectorParams.box.y),
                      Point((int)(selectorParams.box.x + selectorParams.box.width / 2),
                            (int)(selectorParams.box.y + selectorParams.box.height)),
-                     Scalar(255, 0, 0), 2, 1);
+                     Scalar(255, 0, 0), 1, 1);
             }
 
             // show the image bounding box
