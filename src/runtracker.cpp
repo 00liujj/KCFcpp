@@ -41,7 +41,7 @@ void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn, string la
         //cv::Rect box2 = box;
         //ofs << cv::format("%d %d %d %d %d\n", 0, box2.x, box2.y, box2.width, box2.height);
         // darknet style
-        ofs << cv::format("%s %f %f %f %f\n", label.c_str(), (box.x+box.width/2.f)/size.width, (box.y+box.height/2.f)/size.height, box.width/size.width, box.height/size.height);
+        ofs << cv::format("%04d %s %f %f %f %f\n", count, label.c_str(), (box.x+box.width/2.f)/size.width, (box.y+box.height/2.f)/size.height, box.width/size.width, box.height/size.height);
     }
 }
 
@@ -213,6 +213,10 @@ int track_video(int argc, char *argv[])
     }
 
 
+    if (label.size() == 0) {
+        printf("please set a label 0 1 2 3\n");
+        return 0;
+    }
 
 
     // Create KCFTracker object
