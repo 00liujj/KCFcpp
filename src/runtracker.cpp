@@ -16,19 +16,20 @@ using namespace std;
 using namespace cv;
 
 
-void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn) {
+void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn, string label) {
 
     static float old_w = 0;
     float new_w = box.width / size.width;
 
     float rate = (new_w - old_w) / new_w;
     old_w = new_w;
-    printf("The width change rate is %f %f\n", box.width, rate);
-    printf("TRACKING_RESULTS: %05d %f %f %f %f\n", count, box.x/size.width, box.y/size.height,
+    //printf("The width change rate is %f %f\n", box.width, rate);
+    printf("TRACKING_RESULTS: %05d %s %f %f %f %f\n", count, label.c_str(),
+           box.x/size.width, box.y/size.height,
            (box.x+box.width)/size.width, (box.y+box.height)/size.height);
 
     char* outbox = getenv("OUTPUT_BOX");
-    if (outbox && strcmp(outbox, "1") == 0) {
+    if (1 || outbox && strcmp(outbox, "1") == 0) {
         string::size_type pos = fn.find_last_of(".");
         string txtfn;
         if (pos != string::npos) {
@@ -36,11 +37,11 @@ void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn) {
         } else {
             txtfn = fn+".txt";
         }
-        ofstream ofs(txtfn);
+        static ofstream ofs(txtfn);
         //cv::Rect box2 = box;
         //ofs << cv::format("%d %d %d %d %d\n", 0, box2.x, box2.y, box2.width, box2.height);
         // darknet style
-        ofs << cv::format("%d %f %f %f %f\n", 0, box.x+box.width/2.f, box.y+box.height/2.f, box.width, box.height);
+        ofs << cv::format("%s %f %f %f %f\n", label.c_str(), (box.x+box.width/2.f)/size.width, (box.y+box.height/2.f)/size.height, box.width/size.width, box.height/size.height);
     }
 }
 
@@ -98,7 +99,6 @@ int annoate(int argc, char *argv[]) {
     Ptr<KCFTracker> tracker = new KCFTracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
 
 
-    cv::Size2f size(640, 480);
 
     int count = 0;
 
@@ -114,6 +114,10 @@ int annoate(int argc, char *argv[]) {
         cv::Mat mat, frame;
         vc >> mat;
         if (mat.empty()) break;
+
+        float ratio = std::min(1., 640./mat.cols);
+        cv::Size2f size(mat.cols * ratio, mat.rows*ratio);
+
 
         cv::resize(mat, frame, size);
 
@@ -135,11 +139,11 @@ int annoate(int argc, char *argv[]) {
             box = input_box;
         }
 
-        output_box(count, box, size, fn);
+        output_box(count, box, size, fn, "0");
 
         prev_box = box;
 
-        //cv::waitKey(0);
+        cv::waitKey(0);
 
         count++;
 
@@ -163,9 +167,10 @@ int track_video(int argc, char *argv[])
     bool HOG = true;
     bool FIXEDWINDOW = false;
     bool MULTISCALE = true;
-    bool SILENT = true;
+    bool SILENT = false;
     bool LAB = false;
     bool HELP = false;
+    string label;
     string start_roi;
 
     vector<string> fns;
@@ -186,6 +191,9 @@ int track_video(int argc, char *argv[])
         else if ( strcmp (argv[i], "--start_roi") == 0 ) {
             i = i+1;
             start_roi = argv[i];
+        } else if (strcmp (argv[i], "--label") == 0) {
+            i = i+1;
+            label = argv[i];
         }
         else if ( strcmp (argv[i], "--gray") == 0 )
             HOG = false;
@@ -216,7 +224,7 @@ int track_video(int argc, char *argv[])
     bool has_init = false;
 
 
-    cv::Size2f size(640, 480);
+    //cv::Size2f size(640, 480);
 
     int count = 0;
 
@@ -229,6 +237,8 @@ int track_video(int argc, char *argv[])
         vc >> mat;
         if (mat.empty()) break;
 
+        float ratio = std::min(1., 640./mat.cols);
+        cv::Size2f size(mat.cols * ratio, mat.rows*ratio);
         cv::resize(mat, frame, size);
 
         if (start_roi.size() > 0) {
@@ -254,18 +264,18 @@ int track_video(int argc, char *argv[])
 
                 tracker->init(box, frame);
                 has_init = true;
-                output_box(count, box, size, fn);
+                output_box(count, box, size, fn, label);
             }
         }
 
         if (has_init) {
             cv::Rect2f box = tracker->update(frame);
-            output_box(count, box, size, fn);
+            output_box(count, box, size, fn, label);
             cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
         }
 
         cv::imshow("Frame", frame);
-        char key = cv::waitKey(1);
+        char key = cv::waitKey(0);
 
         if ('s' == key) {
             cv::Rect box = cv::selectROI("Frame", frame, true, false);
@@ -273,7 +283,7 @@ int track_video(int argc, char *argv[])
             if (box.width > 0  && box.height > 0) {
                 tracker->init(box, frame);
                 has_init = true;
-                output_box(count, box, size, fn);
+                output_box(count, box, size, fn, label);
             }
         } else if ('q' == key) {
             break;
