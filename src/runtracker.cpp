@@ -231,6 +231,7 @@ int track_video(int argc, char *argv[])
     //cv::Size2f size(640, 480);
 
     int count = 0;
+    string status = "NONE";
 
     for (int i=0; i<fns.size(); i++) {
       string fn = fns[i];
@@ -278,8 +279,12 @@ int track_video(int argc, char *argv[])
             cv::rectangle(frame, box, CV_RGB(0, 255, 0), 1);
         }
 
+
+        cv::putText(frame, status, cv::Point(20, 20), 1, 1, CV_RGB(255, 0, 0));
+
         cv::imshow("Frame", frame);
         char key = cv::waitKey(0);
+
 
         if ('s' == key) {
             cv::Rect box = cv::selectROI("Frame", frame, true, false);
@@ -288,11 +293,17 @@ int track_video(int argc, char *argv[])
                 tracker->init(box, frame);
                 has_init = true;
                 output_box(count, box, size, fn, label);
+                status = "TRACK";
+            } else {
+                has_init = false;
+                status = "TRACK_FAIL";
             }
+        } else if ('d' == key) {
+            has_init = false;
+            status = "DELETE";
         } else if ('q' == key) {
             break;
         }
-
 
 
         //if (count > 1000)
