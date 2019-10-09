@@ -45,7 +45,7 @@ void output_box(int count, cv::Rect2f box, cv::Size2f size, string fn, string la
     }
 }
 
-
+/*
 int annoate(int argc, char *argv[]) {
 
     bool HOG = true;
@@ -156,7 +156,7 @@ int annoate(int argc, char *argv[]) {
 
 
 }
-
+*/
 
 
 
@@ -165,7 +165,7 @@ int annoate(int argc, char *argv[]) {
 int track_video(int argc, char *argv[])
 {
     bool HOG = true;
-    bool FIXEDWINDOW = false;
+    bool FIXEDWINDOW = true;
     bool MULTISCALE = true;
     bool SILENT = false;
     bool LAB = false;

@@ -137,9 +137,9 @@ KCFTracker::KCFTracker(bool hog, bool fixed_window, bool multiscale, bool lab)
 
 
     if (multiscale) { // multiscale
-        template_size = 96;
+        template_size = 100;
         //template_size = 100;
-        scale_step = 1.05;
+        scale_step = 1.03;
         scale_weight = 0.95;
         if (!fixed_window) {
             //printf("Multiscale does not support non-fixed window.\n");
@@ -184,6 +184,35 @@ cv::Rect KCFTracker::update(cv::Mat image)
     float peak_value;
     cv::Point2f res = detect(_tmpl, getFeatures(image, 0, 1.0f), peak_value);
 
+#if 1
+    if (scale_step != 1) {
+        for (int i=0; i<5; i++) {
+            double scale = pow(scale_step, i+1);
+
+            float new_peak_value;
+            cv::Point2f new_res = detect(_tmpl, getFeatures(image, 0, 1.0f / scale), new_peak_value);
+
+            if (scale_weight * new_peak_value > peak_value) {
+                res = new_res;
+                peak_value = new_peak_value;
+                _scale /= scale;
+                _roi.width /= scale;
+                _roi.height /= scale;
+            }
+
+
+            new_res = detect(_tmpl, getFeatures(image, 0, scale), new_peak_value);
+
+            if (scale_weight * new_peak_value > peak_value) {
+                res = new_res;
+                peak_value = new_peak_value;
+                _scale *= scale;
+                _roi.width *= scale;
+                _roi.height *= scale;
+            }
+        }
+    }
+#else
     if (scale_step != 1) {
         // Test at a smaller _scale
         float new_peak_value;
@@ -208,6 +237,7 @@ cv::Rect KCFTracker::update(cv::Mat image)
             _roi.height *= scale_step;
         }
     }
+#endif
 
     // Adjust by cell size and _scale
     _roi.x = cx - _roi.width / 2.0f + ((float) res.x * cell_size * _scale);
