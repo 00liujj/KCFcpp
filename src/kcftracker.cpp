@@ -160,9 +160,12 @@ KCFTracker::KCFTracker(bool hog, bool fixed_window, bool multiscale, bool lab)
 // Initialize tracker 
 void KCFTracker::init(const cv::Rect &roi, cv::Mat image)
 {
+    //printf("init\n");
     _roi = roi;
     assert(roi.width >= 0 && roi.height >= 0);
     _tmpl = getFeatures(image, 1);
+    //printf("template dim %d %d %d\n", _tmpl.cols, _tmpl.rows, _tmpl.channels());
+    //printf("size patch %d %d %d\n", size_patch[1], size_patch[0], size_patch[2]);
     _prob = createGaussianPeak(size_patch[0], size_patch[1]);
     _alphaf = cv::Mat(size_patch[0], size_patch[1], CV_32FC2, float(0));
     //_num = cv::Mat(size_patch[0], size_patch[1], CV_32FC2, float(0));
@@ -172,6 +175,7 @@ void KCFTracker::init(const cv::Rect &roi, cv::Mat image)
 // Update position based on the new frame
 cv::Rect KCFTracker::update(cv::Mat image)
 {
+    //printf("update\n");
     if (_roi.x + _roi.width <= 0) _roi.x = -_roi.width + 1;
     if (_roi.y + _roi.height <= 0) _roi.y = -_roi.height + 1;
     if (_roi.x >= image.cols - 1) _roi.x = image.cols - 2;
@@ -436,8 +440,10 @@ cv::Mat KCFTracker::getFeatures(const cv::Mat & image, bool inithann, float scal
         IplImage z_ipl = z;
         CvLSVMFeatureMapCaskade *map;
         getFeatureMaps(&z_ipl, cell_size, &map);
+        //printf("hog feature %d %d %d --> %d %d %d\n", z.cols, z.rows, z.channels(), map->sizeX, map->sizeY, map->numFeatures);
         normalizeAndTruncate(map,0.2f);
         PCAFeatureMaps(map);
+        //printf("normalize trunc pca %d %d %d\n", map->sizeX, map->sizeY, map->numFeatures);
         size_patch[0] = map->sizeY;
         size_patch[1] = map->sizeX;
         size_patch[2] = map->numFeatures;
